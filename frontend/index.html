@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Seekr - Find the Missing. Faster.</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; margin: 0; }
+        .hero-bg {
+            background: linear-gradient(to right, rgba(0,0,0,0.92) 45%, rgba(0,0,0,0.55) 100%),
+                        url('https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1600&q=80') center/cover no-repeat;
+            min-height: 460px;
+        }
+        .ticker-wrap { overflow: hidden; white-space: nowrap; }
+        .ticker { display: inline-block; animation: scroll-left 40s linear infinite; }
+        @keyframes scroll-left { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+        #homeMap { height: 100%; width: 100%; }
+    </style>
+</head>
+<body class="bg-white text-gray-900">
+
+<!-- Navbar -->
+<nav class="bg-white px-8 py-3 flex items-center justify-between shadow-sm sticky top-0 z-50 border-b">
+    <div class="flex items-center gap-2">
+        <div class="w-5 h-5 bg-red-600 rounded-full"></div>
+        <span class="text-lg font-black tracking-tight">Seekr</span>
+    </div>
+    <div class="flex items-center gap-7 text-xs font-semibold tracking-widest uppercase">
+        <a href="index.html" class="text-red-600 border-b-2 border-red-600 pb-1">Home</a>
+        <a href="report.html" class="text-gray-500 hover:text-red-600 transition-colors">Report Case</a>
+        <a href="map.html" class="text-gray-500 hover:text-red-600 transition-colors">Map</a>
+        <a href="cases.html" class="text-gray-500 hover:text-red-600 transition-colors">Sightings</a>
+    </div>
+    <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 border rounded-full px-3 py-1.5 text-xs text-gray-400 w-44">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <span>Search missing persons...</span>
+        </div>
+        <button class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm">🔔</button>
+        <div class="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-white text-xs font-bold">S</div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero-bg relative flex items-center px-12 py-16">
+    <div class="max-w-xl z-10 relative">
+        <div class="flex items-center gap-2 mb-5">
+            <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            <span class="text-red-400 text-xs font-bold tracking-widest uppercase">Real-Time Emergency Response</span>
+        </div>
+        <h1 class="text-5xl font-black text-white leading-tight">
+            Find the <span class="text-red-500">Missing.</span><br>Faster than ever.
+        </h1>
+        <p class="text-gray-300 text-sm mt-5 leading-relaxed max-w-sm">
+            The world's most advanced community-driven emergency response platform. Leveraging AI and instant neighborhood alerts to bring loved ones home.
+        </p>
+        <div class="flex gap-3 mt-8">
+            <a href="report.html" class="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded text-xs font-bold tracking-wider uppercase flex items-center gap-2 transition-colors">
+                🚨 Report a Case
+            </a>
+            <a href="map.html" class="border border-gray-500 hover:border-white text-white px-5 py-3 rounded text-xs font-bold tracking-wider uppercase flex items-center gap-2 transition-colors">
+                🗺 Active Search Map
+            </a>
+        </div>
+    </div>
+
+    <!-- Global Status Card -->
+    <div class="absolute right-12 bottom-10 bg-white rounded-xl shadow-2xl p-5 w-52">
+        <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Global Status</div>
+        <div class="flex items-center justify-between mt-3">
+            <div>
+                <div class="text-xs text-gray-500">Resolution Rate</div>
+                <div class="text-3xl font-black text-gray-900 mt-0.5">94.2%</div>
+            </div>
+            <div class="text-red-500 text-2xl">📈</div>
+        </div>
+        <div class="text-xs text-gray-400 mt-3 leading-relaxed">Last verified case resolved 34 minutes ago in Santa Maria Area.</div>
+    </div>
+</div>
+
+<!-- Alert Ticker -->
+<div class="bg-red-600 py-2.5 ticker-wrap">
+    <div class="ticker text-white text-xs font-semibold tracking-wide">
+        &nbsp;&nbsp;&nbsp;🚨 Silver Alert: James Miller, 72, last seen in Silver Spring, MD.
+        &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+        🔶 Amber Alert: Blue 2019 Honda Civic, License ARC-1234, Houston TX.
+        &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+        🔴 Missing Person: Sarah Chen, 19, last seen at University District, Seattle.
+        &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+        🚨 Child Alert: Tommy Park, 8, last seen at Central Park, New York.
+        &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+    </div>
+</div>
+
+<!-- Stats Section -->
+<div class="bg-gray-50 px-8 py-10">
+    <div class="max-w-6xl mx-auto grid grid-cols-3 gap-5">
+
+        <!-- Active Cases -->
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider">System Wide</div>
+            <div class="text-sm font-bold text-gray-700 mt-1">Active Search Cases</div>
+            <div class="text-6xl font-black text-gray-900 mt-4" id="caseCount">—</div>
+            <div class="text-green-500 text-xs font-semibold mt-3" id="caseTrend">Connecting to API...</div>
+        </div>
+
+        <!-- High Priority -->
+        <div class="bg-gray-900 text-white rounded-xl p-6 shadow-sm">
+            <div class="text-xs text-red-400 font-semibold uppercase tracking-wider">Action Required</div>
+            <div class="text-sm font-bold mt-1">High Priority Incidents</div>
+            <div class="text-xs text-gray-400 mt-1">Immediate response required in designated zones.</div>
+            <div class="text-6xl font-black mt-5" id="highPriorityCount">—</div>
+            <div class="text-xs text-gray-500 mt-2">Cases with priority score &gt; 50</div>
+        </div>
+
+        <!-- Recent Sightings -->
+        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div class="flex items-center justify-between mb-1">
+                <div class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Verified Data</div>
+                <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            </div>
+            <div class="text-sm font-bold text-gray-700">Recent Sightings</div>
+            <div class="text-xs text-gray-400 mb-1">Last 24 hours</div>
+            <div id="recentSightings" class="mt-2 space-y-2 text-xs text-gray-400">Loading...</div>
+            <a href="cases.html" class="text-red-600 text-xs font-bold mt-4 block hover:underline">VIEW ALL SIGHTINGS →</a>
+        </div>
+
+    </div>
+</div>
+
+<!-- Map + Community Section -->
+<div class="bg-white px-8 py-10">
+    <div class="max-w-6xl mx-auto grid grid-cols-3 gap-5 items-stretch">
+        <div class="col-span-2 rounded-xl overflow-hidden border border-gray-200" style="height:300px">
+            <div id="homeMap" style="height:100%;width:100%;"></div>
+        </div>
+        <div class="bg-red-600 text-white rounded-xl p-8 flex flex-col justify-between">
+            <div>
+                <div class="text-xs text-red-200 font-semibold uppercase tracking-wider mb-2">Community</div>
+                <h3 class="text-2xl font-black leading-tight">Help Us Monitor Your Area</h3>
+                <p class="text-red-100 text-sm mt-3 leading-relaxed">Join 50,000+ Seekr volunteers receiving localized alerts and saving lives every day.</p>
+            </div>
+            <button class="mt-6 w-full bg-white text-red-600 font-black py-3 rounded text-xs tracking-wider uppercase hover:bg-gray-50 transition-colors">
+                Become a Volunteer
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-gray-900 text-gray-400 px-8 py-12">
+    <div class="max-w-6xl mx-auto grid grid-cols-4 gap-8">
+        <div>
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-5 h-5 bg-red-600 rounded-full"></div>
+                <span class="text-white font-black">Seekr</span>
+            </div>
+            <p class="text-xs leading-relaxed">Rapid response infrastructure for a safer world. Connecting communities and authorities in critical moments.</p>
+        </div>
+        <div>
+            <div class="text-white font-bold text-sm mb-3">Platform</div>
+            <ul class="text-xs space-y-2">
+                <li><a href="cases.html" class="hover:text-white transition-colors">Active Cases</a></li>
+                <li><a href="cases.html" class="hover:text-white transition-colors">Sighting Reports</a></li>
+                <li><a href="map.html" class="hover:text-white transition-colors">Global Search Map</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Emergency Protocols</a></li>
+            </ul>
+        </div>
+        <div>
+            <div class="text-white font-bold text-sm mb-3">Resources</div>
+            <ul class="text-xs space-y-2">
+                <li><a href="#" class="hover:text-white transition-colors">Privacy Policy</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Terms of Service</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Contact Support</a></li>
+                <li><a href="#" class="hover:text-white transition-colors">Official Authorities</a></li>
+            </ul>
+        </div>
+        <div>
+            <div class="text-white font-bold text-sm mb-3">Security</div>
+            <p class="text-xs leading-relaxed">Verification secured by advanced biometric and geographic cross-referencing.</p>
+            <div class="mt-3 border border-green-500 text-green-400 text-xs px-2 py-1 rounded inline-flex items-center gap-1">
+                ✓ Verified Provider
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/home.js"></script>
+</body>
+</html>

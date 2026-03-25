@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Active Cases - Seekr</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .case-card:hover { transform: translateY(-2px); transition: transform 0.2s ease; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+
+<!-- Navbar -->
+<nav class="bg-white px-8 py-3 flex items-center justify-between shadow-sm sticky top-0 z-50 border-b">
+    <div class="flex items-center gap-2">
+        <div class="w-5 h-5 bg-red-600 rounded-full"></div>
+        <span class="text-lg font-black tracking-tight">Seekr</span>
+    </div>
+    <div class="flex items-center gap-7 text-xs font-semibold tracking-widest uppercase">
+        <a href="index.html" class="text-gray-500 hover:text-red-600 transition-colors">Home</a>
+        <a href="report.html" class="text-gray-500 hover:text-red-600 transition-colors">Report Case</a>
+        <a href="map.html" class="text-gray-500 hover:text-red-600 transition-colors">Map</a>
+        <a href="cases.html" class="text-red-600 border-b-2 border-red-600 pb-1">Sightings</a>
+    </div>
+    <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 border rounded-full px-3 py-1.5 text-xs text-gray-400 w-40">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <span>Search cases...</span>
+        </div>
+        <button class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm">🔔</button>
+    </div>
+</nav>
+
+<!-- Page Header -->
+<div class="bg-white border-b px-8 py-6">
+    <div class="flex items-center gap-2 mb-2">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span class="text-green-600 text-xs font-bold uppercase tracking-wider">Live Monitoring Active</span>
+    </div>
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-black">Active Cases</h1>
+            <p class="text-gray-500 text-sm mt-1 max-w-xl">Real-time data synchronization with local law enforcement. Every second matters in the search for the missing.</p>
+        </div>
+        <div class="flex gap-3">
+            <button class="border border-gray-300 text-gray-600 px-4 py-2 rounded text-xs font-bold tracking-wider hover:bg-gray-50 flex items-center gap-1">
+                ⚙ FILTER
+            </button>
+            <a href="report.html" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-xs font-bold tracking-wider flex items-center gap-1 transition-colors">
+                + NEW CASE
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="px-8 pt-6 max-w-screen-xl mx-auto">
+    <div class="flex gap-2 mb-5">
+        <button onclick="setFilter('all')" id="tab-all"
+            class="tab-btn px-4 py-2 rounded-full text-xs font-bold tracking-wider border transition-colors bg-gray-900 text-white border-gray-900">
+            ALL
+        </button>
+        <button onclick="setFilter('missing')" id="tab-missing"
+            class="tab-btn px-4 py-2 rounded-full text-xs font-bold tracking-wider border transition-colors border-gray-300 text-gray-500 hover:border-gray-500">
+            ACTIVE
+        </button>
+        <button onclick="setFilter('found')" id="tab-found"
+            class="tab-btn px-4 py-2 rounded-full text-xs font-bold tracking-wider border transition-colors border-green-300 text-green-600 hover:bg-green-50">
+            ✅ FOUND
+        </button>
+    </div>
+</div>
+
+<!-- Search Radius Filter -->
+<div class="px-8 pb-4 max-w-screen-xl mx-auto">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 px-5 py-4">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-sm font-black text-gray-800">📍 Search Nearby Cases</span>
+      <span class="text-xs text-gray-400 font-normal">— filter cases within a radius of your location</span>
+      <button onclick="clearRadiusFilter()" id="clearRadiusBtn"
+        class="ml-auto text-xs text-red-500 font-bold hover:underline hidden">✕ Clear Filter</button>
+    </div>
+    <div class="flex flex-wrap gap-3 items-end">
+      <div>
+        <label class="text-xs text-gray-500 font-semibold block mb-1">Latitude</label>
+        <input id="radiusLat" type="number" step="any" placeholder="e.g. 17.385"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-red-400">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-semibold block mb-1">Longitude</label>
+        <input id="radiusLng" type="number" step="any" placeholder="e.g. 78.486"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-red-400">
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-semibold block mb-1">Radius (km)</label>
+        <select id="radiusKm" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-400">
+          <option value="5">5 km</option>
+          <option value="10">10 km</option>
+          <option value="25">25 km</option>
+          <option value="50">50 km</option>
+          <option value="100">100 km</option>
+        </select>
+      </div>
+      <button onclick="applyRadiusFilter()"
+        class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg text-xs tracking-wider transition-colors flex items-center gap-1.5">
+        🔍 Search Nearby
+      </button>
+      <button onclick="useMyLocation()"
+        class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-lg text-xs tracking-wider transition-colors flex items-center gap-1.5">
+        📡 Use My Location
+      </button>
+    </div>
+    <div id="radiusMsg" class="text-xs text-gray-400 mt-2 hidden"></div>
+  </div>
+</div>
+
+<!-- Cases Grid -->
+<div class="px-8 pb-6 max-w-screen-xl mx-auto">
+    <div id="casesContainer" class="grid grid-cols-3 gap-5"></div>
+    <div id="loadingMsg" class="text-center text-gray-400 py-16 text-sm">Loading cases...</div>
+</div>
+
+<!-- ===== EDIT CASE MODAL ===== -->
+<div id="editModal" class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4" style="display:none">
+  <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[92vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+      <div>
+        <div class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-0.5">Edit Case</div>
+        <h2 id="editModalTitle" class="text-xl font-black text-gray-900"></h2>
+      </div>
+      <button onclick="closeEditModal()" class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold transition-colors">✕</button>
+    </div>
+    <div class="p-6 space-y-5">
+      <div class="flex gap-4 items-start">
+        <div>
+          <img id="editPhotoPreview" src="" class="w-20 h-20 rounded-xl object-cover bg-gray-200 border border-gray-200">
+          <div id="editPhotoDropzone" class="mt-2 border border-dashed border-gray-300 rounded-lg px-3 py-2 text-center text-gray-400 text-xs cursor-pointer hover:border-red-400 transition-colors w-20">
+            📷 Change
+            <input type="file" id="editPhoto" accept="image/*" class="hidden">
+          </div>
+        </div>
+        <div class="flex-1 space-y-3">
+          <div>
+            <label class="text-xs text-gray-500 font-semibold block mb-1">Full Name</label>
+            <input id="editName" placeholder="Full name" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 font-semibold block mb-1">Age</label>
+            <input id="editAge" type="number" placeholder="Age" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-semibold block mb-2">Last Known Location <span class="text-gray-400 font-normal">(click map to update pin)</span></label>
+        <div id="editMap" class="h-44 rounded-xl border border-gray-200 mb-2"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="editLat" type="number" step="any" placeholder="Latitude" class="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400">
+          <input id="editLng" type="number" step="any" placeholder="Longitude" class="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-semibold block mb-1">Description</label>
+        <textarea id="editDescription" rows="2" placeholder="Clothing, features, medical conditions..."
+          class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"></textarea>
+      </div>
+      <button onclick="submitEdit()" id="editSubmitBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-xl text-sm tracking-wider uppercase transition-colors">
+        💾 Save Changes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VIEW DETAILS MODAL ===== -->
+<div id="detailModal" class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4" style="display:none">
+  <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto shadow-2xl">
+    <div class="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+      <div>
+        <div class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-0.5">Case Details</div>
+        <h2 id="detailName" class="text-xl font-black text-gray-900"></h2>
+      </div>
+      <button onclick="closeDetail()" class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold transition-colors">✕</button>
+    </div>
+    <div class="p-6">
+      <div class="flex gap-5 mb-6">
+        <img id="detailPhoto" src="" class="w-28 h-28 rounded-xl object-cover bg-gray-200 flex-shrink-0">
+        <div class="flex-1 grid grid-cols-2 gap-2">
+          <div class="bg-gray-50 rounded-lg p-3"><div class="text-xs text-gray-400 font-semibold mb-0.5">AGE</div><div id="detailAge" class="font-black text-gray-900 text-lg"></div></div>
+          <div class="bg-gray-50 rounded-lg p-3"><div class="text-xs text-gray-400 font-semibold mb-0.5">STATUS</div><div id="detailStatus" class="font-black text-lg"></div></div>
+          <div class="bg-gray-50 rounded-lg p-3"><div class="text-xs text-gray-400 font-semibold mb-0.5">LAST SEEN</div><div id="detailTimeSince" class="font-bold text-gray-700 text-sm"></div></div>
+          <div class="bg-gray-50 rounded-lg p-3"><div class="text-xs text-gray-400 font-semibold mb-0.5">PRIORITY</div><div id="detailPriority" class="font-black text-lg"></div></div>
+        </div>
+      </div>
+      <div id="detailDescriptionWrap" class="mb-4 hidden">
+        <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2 border-l-4 border-red-600 pl-3">Description</div>
+        <p id="detailDescription" class="text-sm text-gray-600 bg-gray-50 rounded-xl p-4 leading-relaxed"></p>
+      </div>
+      <div class="mb-6">
+        <div class="text-xs font-black uppercase tracking-widest text-gray-500 mb-2 border-l-4 border-red-600 pl-3">Last Known Location</div>
+        <div id="detailMap" class="h-48 rounded-xl border border-gray-200"></div>
+        <div id="detailCoords" class="text-xs text-gray-400 mt-1.5"></div>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-xs font-black uppercase tracking-widest text-gray-500 border-l-4 border-red-600 pl-3">Public Sightings</div>
+          <button id="addSightingBtn" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg tracking-wider transition-colors">+ REPORT SIGHTING</button>
+        </div>
+        <div id="sightingsList"><div class="text-xs text-gray-400 text-center py-6">Loading sightings...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== REPORT SIGHTING MODAL ===== -->
+<div id="sightingModal" class="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4" style="display:none">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <div>
+        <div class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-0.5">Report a Sighting</div>
+        <h3 id="sightingCaseName" class="text-lg font-black text-gray-900"></h3>
+      </div>
+      <button onclick="closeSighting()" class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold transition-colors">✕</button>
+    </div>
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="text-xs text-gray-500 font-semibold block mb-1">Your Name (optional)</label>
+        <input id="sightingReporter" placeholder="Anonymous" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 font-semibold block mb-1">Date Seen *</label>
+          <input id="sightingDate" type="date" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 font-semibold block mb-1">Time Seen *</label>
+          <input id="sightingTime" type="time" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-semibold block mb-1">Location * <span class="text-gray-400 font-normal">(click map to pin)</span></label>
+        <div id="sightingMap" class="h-40 rounded-lg border border-gray-200 mb-2"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="sightingLat" type="number" step="any" placeholder="Latitude" class="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400">
+          <input id="sightingLng" type="number" step="any" placeholder="Longitude" class="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-400">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-semibold block mb-1">What did you see?</label>
+        <textarea id="sightingDesc" rows="3" placeholder="Clothing, direction, behaviour..." class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"></textarea>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-semibold block mb-1">Photo Evidence <span class="text-gray-400 font-normal">(optional)</span></label>
+        <div id="sightingPhotoDropzone"
+          class="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-red-400 transition-colors">
+          <input type="file" id="sightingPhoto" accept="image/*" class="hidden">
+          <div id="sightingPhotoPreviewWrap" class="hidden mb-3">
+            <img id="sightingPhotoPreview" src="" class="mx-auto max-h-32 rounded-lg object-cover">
+          </div>
+          <div id="sightingPhotoPrompt" class="flex flex-col items-center gap-1">
+            <span class="text-2xl">📷</span>
+            <span class="text-xs text-gray-500 font-semibold">Click to attach a photo</span>
+            <span class="text-xs text-gray-400">JPG, PNG — max 5 MB</span>
+          </div>
+        </div>
+      </div>
+      <button onclick="submitSighting()" id="sightingSubmitBtn" class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-xl text-sm tracking-wider uppercase transition-colors">
+        📍 Submit Sighting
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="js/config.js"></script>
+<script src="js/cases.js"></script>
+</body>
+</html>

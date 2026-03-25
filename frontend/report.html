@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Report Case - Seekr</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        #locationMap { height: 200px; border-radius: 8px; overflow: hidden; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900">
+
+<!-- ===== VERIFICATION MODAL ===== -->
+<div id="verifyModal" class="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+    <div class="bg-red-600 rounded-t-2xl px-6 py-5">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🔐</span>
+        <div>
+          <div class="text-white font-black text-lg">Identity Verification Required</div>
+          <div class="text-red-200 text-xs mt-0.5">Required before submitting a missing person report</div>
+        </div>
+      </div>
+    </div>
+    <div class="p-6 space-y-5">
+      <!-- Disclaimer -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <div class="flex gap-2">
+          <span class="text-amber-500 text-lg flex-shrink-0">⚠️</span>
+          <p class="text-xs text-amber-800 leading-relaxed">
+            <strong>Legal Notice:</strong> Submitting false or fabricated missing person reports is a <strong>punishable offense under Indian law</strong> (IPC Section 177 & 182) and may be reported directly to the police.
+          </p>
+        </div>
+      </div>
+
+      <!-- Step 1: Phone -->
+      <div id="verifyStep1">
+        <label class="text-xs text-gray-500 font-semibold block mb-1">Your Mobile Number</label>
+        <div class="flex gap-2">
+          <span class="border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-gray-50 text-gray-500 font-bold">+91</span>
+          <input id="verifyPhone" type="tel" maxlength="10" placeholder="Enter 10-digit number"
+            class="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+        </div>
+        <button onclick="sendOtp()"
+          class="mt-3 w-full bg-gray-900 hover:bg-gray-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors">
+          📲 Send OTP
+        </button>
+        <div id="otpError" class="text-xs text-red-500 mt-1 hidden"></div>
+      </div>
+
+      <!-- Step 2: OTP -->
+      <div id="verifyStep2" class="hidden">
+        <div class="text-xs text-green-600 font-semibold mb-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+          ✅ OTP sent to +91 <span id="otpPhoneDisplay"></span> (demo: use <strong>1234</strong>)
+        </div>
+        <label class="text-xs text-gray-500 font-semibold block mb-1">Enter OTP</label>
+        <input id="otpInput" type="text" maxlength="4" placeholder="4-digit OTP"
+          class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-center text-xl font-black tracking-widest focus:outline-none focus:ring-2 focus:ring-red-400">
+        <div id="otpVerifyError" class="text-xs text-red-500 mt-1 hidden"></div>
+      </div>
+
+      <!-- Checkbox -->
+      <label class="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" id="verifyCheck" class="mt-0.5 w-4 h-4 accent-red-600 flex-shrink-0">
+        <span class="text-xs text-gray-600 leading-relaxed">
+          I confirm this is a <strong>genuine report</strong> and the information provided is accurate to the best of my knowledge.
+        </span>
+      </label>
+
+      <button onclick="completeVerification()" id="verifySubmitBtn"
+        class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-xl text-sm tracking-wider uppercase transition-colors">
+        ✅ Verify &amp; Continue to Report Form
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Navbar -->
+<nav class="bg-white px-8 py-3 flex items-center justify-between shadow-sm sticky top-0 z-50 border-b">
+    <div class="flex items-center gap-2">
+        <div class="w-5 h-5 bg-red-600 rounded-full"></div>
+        <span class="text-lg font-black tracking-tight">Seekr</span>
+    </div>
+    <div class="flex items-center gap-7 text-xs font-semibold tracking-widest uppercase">
+        <a href="index.html" class="text-gray-500 hover:text-red-600 transition-colors">Home</a>
+        <a href="report.html" class="text-red-600 border-b-2 border-red-600 pb-1">Report Case</a>
+        <a href="map.html" class="text-gray-500 hover:text-red-600 transition-colors">Map</a>
+        <a href="cases.html" class="text-gray-500 hover:text-red-600 transition-colors">Sightings</a>
+    </div>
+    <div class="flex items-center gap-3">
+        <button class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm">🔔</button>
+        <div class="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-white text-xs font-bold">S</div>
+    </div>
+</nav>
+
+<!-- Page Header -->
+<div class="bg-white border-b px-8 py-6">
+    <div class="flex items-center gap-2 mb-2">
+        <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+        <span class="text-red-500 text-xs font-bold uppercase tracking-widest">Live Priority Response</span>
+    </div>
+    <h1 class="text-3xl font-black">Report Missing Case</h1>
+    <p class="text-gray-500 text-sm mt-1 max-w-xl">Every second counts. Provide accurate information below to initiate a system-wide scan and alert local authorities immediately.</p>
+</div>
+
+<!-- Form Body -->
+<div class="px-8 py-8 max-w-6xl mx-auto grid grid-cols-3 gap-6">
+
+    <!-- Left: Main Form (2 cols) -->
+    <div class="col-span-2 space-y-5">
+
+        <!-- Subject Identity -->
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+            <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-4 border-l-4 border-red-600 pl-3">Subject Identity</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="text-xs text-gray-500 font-semibold block mb-1">Full Name *</label>
+                    <input id="name" placeholder="Legal Name" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent">
+                </div>
+                <div class="col-span-2">
+                    <label class="text-xs text-gray-500 font-semibold block mb-1">Description</label>
+                    <textarea id="description" rows="3" placeholder="Clothing worn, physical features, behavior, medical conditions, last known details..."
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 font-semibold block mb-1">Age</label>
+                    <input id="age" type="number" placeholder="Years" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 font-semibold block mb-1">Gender</label>
+                    <select id="gender" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-400">
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Last Known Location -->
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+            <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-3 border-l-4 border-red-600 pl-3">Last Known Location</h2>
+            <div id="locationMap" class="border border-gray-200 mb-3"></div>
+            <p class="text-xs text-gray-400 mb-3">📍 Click on the map to pin the last known location.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs text-gray-500 font-semibold block mb-1">Latitude</label>
+                    <input id="lat" type="number" step="any" placeholder="e.g. 17.385" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 font-semibold block mb-1">Longitude</label>
+                    <input id="lng" type="number" step="any" placeholder="e.g. 78.486" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400">
+                </div>
+            </div>
+        </div>
+
+        <p class="text-xs text-gray-400 px-1">By submitting, you confirm this information is accurate to the best of your knowledge.</p>
+
+        <button onclick="submitCase()" id="submitBtn"
+            class="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-colors">
+            🚨 Submit Report →
+        </button>
+    </div>
+
+    <!-- Right: Sidebar -->
+    <div class="space-y-4">
+
+        <!-- Photo Upload -->
+        <div class="bg-white rounded-xl p-5 shadow-sm">
+            <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-3 border-l-4 border-red-600 pl-3">Recent Photograph</h2>
+            <div id="photoDropzone"
+                class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400 text-xs cursor-pointer hover:border-red-400 transition-colors select-none">
+                📷<br><span class="mt-1 block">Upload / Drop Photo</span><span class="text-gray-300">(JPG, PNG – max 5MB)</span>
+                <input type="file" id="photo" accept="image/*" class="hidden">
+            </div>
+            <img id="photoPreview" src="" alt="" class="mt-3 rounded-lg w-full object-cover hidden" style="max-height:140px">
+        </div>
+
+        <!-- Readiness Checklist -->
+        <div class="bg-gray-900 text-white rounded-xl p-5 shadow-sm">
+            <h2 class="text-xs font-black uppercase tracking-widest text-gray-300 mb-3">Readiness Checklist</h2>
+            <ul class="space-y-2.5 text-xs text-gray-400">
+                <li class="flex items-center gap-2"><span class="text-yellow-400 text-base">○</span> Verify Last Contact</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-400 text-base">○</span> Detailed Description</li>
+                <li class="flex items-center gap-2"><span class="text-yellow-400 text-base">○</span> Medical Conditions</li>
+            </ul>
+        </div>
+
+        <!-- Support Numbers -->
+        <div class="bg-white rounded-xl p-5 shadow-sm">
+            <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Support & Authorities</h2>
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
+                <div>
+                    <div class="text-xs text-gray-400">Police (India)</div>
+                    <div class="font-black text-lg text-red-600">100</div>
+                </div>
+                <span class="text-red-500 text-xl">🚔</span>
+            </div>
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
+                <div>
+                    <div class="text-xs text-gray-400">Ambulance</div>
+                    <div class="font-black text-lg text-green-600">108</div>
+                </div>
+                <span class="text-green-500 text-xl">�</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-xs text-gray-400">National Emergency</div>
+                    <div class="font-black text-sm">112</div>
+                </div>
+                <span class="text-gray-400 text-xl">�</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="js/config.js"></script>
+<script src="js/report.js"></script>
+</body>
+</html>
